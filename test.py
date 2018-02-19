@@ -21,24 +21,15 @@ def getDeltaDelete(lastfile,latestfile,delFile):
     latestdf.to_csv("latest.csv", index=False, columns=header)
 
     deltaDelDf = lastdf - latestdf
-    deltaDelDf['Black List'] = "Talos BLF" 
-    header = ["IP", "Black List"]
-    deltaDelDf.to_csv("deltaDel.csv", index=False, columns=header)
+    print (deltaDelDf)
+#    deltaDelDf['Black List'] = "Talos BLF" 
+#    header = ["IP", "Black List"]
+#    deltaDelDf.to_csv("deltaDel.csv", index=False, columns=header)
 
     deltaAddDf = latestdf - lastdf
-    deltaAddDf['Black List'] = "Talos BLF" 
-    header = ["IP", "Black List"]
-    deltaAddDf.to_csv("deltaAdd.csv", index=False, columns=header)
+    print (deltaAddDf)
+#    deltaAddDf['Black List'] = "Talos BLF" 
+#    header = ["IP", "Black List"]
+#    deltaAddDf.to_csv("deltaAdd.csv", index=False, columns=header)
 
-
-#    deleteSet = lastset - latestset
-#    print("/n".join(str(x) for x in deleteSet))
-#    addSet = latestset - lastset
-#    print("/n".join(str(x) for x in addSet))
-    #print(latestset)
-    #print("last-latest = delete")
-    #print(lastset-latestset)
-    #print("latest-last = adds")
-    #print(latestset-lastset)
-    
 getDeltaDelete('talosblf-last.csv','talosblf-latest.csv','deltaDeleteFile.csv')
