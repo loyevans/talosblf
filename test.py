@@ -6,30 +6,48 @@ import csv
 import pandas as pd 
 import numpy as np
 
-def getDeltaDelete(lastfile,latestfile,delFile):
+def getDeltaFiles(lastfile,latestfile,delFile):
     # dump the two files into pandas(memory) and compare
     # stuff to delete will be in latest-last = deltaDelete
     # if nothing in last, then all of latest will go into 
-# useless    lastset = set(pd.read_csv(lastfile, index_col=False, header=None)[0])
-# useless   latestset = set(pd.read_csv(latestfile, index_col=False, header=None)[0])
+
+    # read in 
     lastdf = pd.read_csv(lastfile, index_col=False, header=None, names=["IP", "Black List"])
-    lastdf['Black List'] = "Talos BLF" 
+    lastdf['Black List'] = "Talos Black List" 
+    lastdf['VRF'] = "Default"
     latestdf = pd.read_csv(latestfile, index_col=False, header=None, names=["IP", "Black List"])
-    latestdf['Black List'] = "Talos BLF" 
-    header = ["IP", "Black List"]
+    latestdf['Black List'] = "Talos Black List" 
+    latestdf['VRF'] = "Default"
+    header = ["IP", "VRF", "Black List"]
     lastdf.to_csv("last.csv", index=False, columns=header)
     latestdf.to_csv("latest.csv", index=False, columns=header)
+    
+    deltaDeleteDf = lastdf[~lastdf.IP.isin(latestdf.IP)].dropna()
+    mergeDf = lastdf.merge(latestdf, indicator=True, how='outer')
+    deltaAddDf = mergeDf[mergeDf['_merge'] == 'right_only'].ix[:,:-1]
 
-    deltaDelDf = lastdf - latestdf
-    print (deltaDelDf)
-#    deltaDelDf['Black List'] = "Talos BLF" 
-#    header = ["IP", "Black List"]
-#    deltaDelDf.to_csv("deltaDel.csv", index=False, columns=header)
+    deltaDeleteDf = deltaDeleteDf[header]
+    deltaDeleteDf.to_csv("deltaDelete.csv", index=False)
+    deltaAddDf = deltaAddDf[header]
+    deltaAddDf.to_csv("deltaAdd.csv", index=False)
+    
+    
 
-    deltaAddDf = latestdf - lastdf
-    print (deltaAddDf)
-#    deltaAddDf['Black List'] = "Talos BLF" 
-#    header = ["IP", "Black List"]
-#    deltaAddDf.to_csv("deltaAdd.csv", index=False, columns=header)
 
-getDeltaDelete('talosblf-last.csv','talosblf-latest.csv','deltaDeleteFile.csv')
+
+# code block from Brandon Beck - he's FUCKING awesome
+'''
+annotationUpdates = json.loads(body)
+
+    existingAnnotations = list(db.annotations.find({},{'_id':0}))
+    existing_df = pd.DataFrame(existingAnnotations)
+    update_df = pd.DataFrame(annotationUpdates)
+
+    removeIPList = existing_df[~existing_df.IP.isin(update_df.IP)]['IP'].dropna().T.to_dict().values()
+    merged = existing_df.merge(update_df, indicator=True, how='outer')
+    updateList = merged[merged['_merge'] == 'right_only'].ix[:,:-1].T.to_dict().values()
+
+'''
+
+
+getDeltaFiles('talosblf-last.csv','talosblf-latest.csv','deltaDeleteFile.csv')

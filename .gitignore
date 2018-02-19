@@ -1,2 +1,6 @@
 *.json
 *.ps1
+test.py
+deltaAdd.csv
+deltaDelete.csv
+talosblf-latest.csv

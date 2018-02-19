@@ -69,31 +69,47 @@ def readFromLastBlf(filename):
         last = f.read()
     return(last)
 
-def getDeltaAdd(lastfile,latestfile,addFile):
-    # dump the two files into pandas(memory) and compare
-    # stuff to add will be last-latest = deltaAdd
-    # if nothing in last, then all of latest will go into 
-    lastset = set(pd.read_csv(lastfile, index_col=False, header=None)[0])
-    latestset = set(pd.read_csv(latestfile, index_col=False, header=None)[0])
-    deltaAdd = latestset-lastset
-    while open(addFile,'w'):
-        deltaAdd.DataFrame.to_csv(addFile)
-    print (deltaAdd)
-
-def getDeltaDelete(lastfile,latestfile,delFile):
+def annotateFiles(lastFile,latestFile):
+    # read last file into pandas dataframe, add two columns: VRF and Black List
+    # need to parameterize the List name so we can use other BLFs eventually
+    lastdf = pd.read_csv(lastFile, index_col=False, header=None, names=["IP", "Black List"])
+    lastdf['Black List'] = "Talos Black List" 
+    lastdf['VRF'] = "Default"
+    # read latest file into pandas dataframe, add two columns: VRF and Black List
+    # need to parameterize the List name so we can use other BLFs
+    latestdf = pd.read_csv(latestFile, index_col=False, header=None, names=["IP", "Black List"])
+    latestdf['Black List'] = "Talos Black List" 
+    latestdf['VRF'] = "Default"
+    # write last and latest files with included annotation fields
+    header = ["IP", "VRF", "Black List"]
+    lastdf.to_csv(lastFile, index=False, columns=header)
+    latestdf.to_csv(latestFile, index=False, columns=header)
+    
+def getDeltaFiles(lastFile,latestFile,addFile,delFile):
     # dump the two files into pandas(memory) and compare
     # stuff to delete will be in latest-last = deltaDelete
-    # if nothing in last, then all of latest will go into 
-    lastset = set(pd.read_csv(lastfile, index_col=False, header=None)[0])
-    latestset = set(pd.read_csv(latestfile, index_col=False, header=None)[0])
-    deltaDelete = lastset-latestset
-    while open(delFile,'w'):
-        deltaDelete.DataFrame.to_csv(delFile)
-    print(deltaDelete)
+    # if nothing in last, then all of latest will go into annotations
+    # need to parameterize the column names and stuff so we can use other BLFs eventually
+    # read last file into pandas dataframe
+    lastdf = pd.read_csv(lastFile, index_col=False, header=None, names=["IP", "VRF", "Black List"])
+    # read latest file into pandas dataframe
+    latestdf = pd.read_csv(latestFile, index_col=False, header=None, names=["IP", "VRF", "Black List"])
+    # if it's in last but not in latest, delete it
+    header = ["IP", "VRF", "Black List"]
+    deltaDeleteDf = lastdf[~lastdf.IP.isin(latestdf.IP)].dropna()
+    deltaDeleteDf = deltaDeleteDf[header]
+    deltaDeleteDf.to_csv(delFile, index=False)
+    # if it's in latest but not in last, add it to the deltaAddFile
+    mergeDf = lastdf.merge(latestdf, indicator=True, how='outer')
+    deltaAddDf = mergeDf[mergeDf['_merge'] == 'right_only'].ix[:,:-1]
+    deltaAddDf = deltaAddDf[header]
+    deltaAddDf.to_csv(addFile, index=False)
+
+
 
 
 # make talosBlfUrl an ENV variable at some point??
-# declare the Talos BLF URL as a var
+# need to parameterize the Talos BLF URL as a var
 talosBlfUrl = 'https://talosintelligence.com/documents/ip-blacklist'
 
 latestTalosBlFile = 'talosblf-latest.csv'
@@ -116,18 +132,13 @@ except IOError:
 else:
     lastTalosBlf = readFromLastBlf(lastTalosBlFile)
 
-# call function to compare the last and latest files
+# call function to add annotations to the last and latest files
 # compareFiles(lastBlFile, latestBlFile)
+annotateFiles(lastTalosBlFile,latestTalosBlFile)
 
-# call function to compare and pull out deltaAdds
+# call function to compare and pull out deltas and write thost to csv
 # need to add try/except for io errors
-getDeltaAdd(lastTalosBlFile,latestTalosBlFile,deltaAddFile)
-
-# call function to compare and pull out deltaDeletes
-# need to add try/except for io errors
-getDeltaDelete(lastTalosBlFile,latestTalosBlFile,deltaDeleteFile)
-
-# print return values 
+getDeltaFiles(lastTalosBlFile,latestTalosBlFile,deltaAddFile,deltaDeleteFile)
 
 
 # call function to write the Talos BLF to a file named "talosblf-latest.csv"
