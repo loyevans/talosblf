@@ -16,13 +16,16 @@ There are a BUNCH of different blacklist files in the Internetz, so I'll add tho
 in future versions and this will become more than just a Talos BLF
 
 Basic outline of what I want to do here:
-1. if last does not exist, create an empty last file
-2. grab latest list from talos BLF url
-3. annotate both last and latest with proper annotation keys and values
-4. load both latest and last into memory and compare. if last and latest are the same, quit & notify
-5. get deltas and write them to csv as follows:
+1. if last does not exist, create an empty lastIp.csv file
+2. grab latest IP list from talos BLF url & write to latestIp.csv
+3. read latestIP.csv and lastIP.csv info datarames
+4. compare these dataframes, if they are exactly the same, exit & notify, if not, go on
+5. annotate both last and latest with proper annotation keys and values
+5. check for deltas and write them to csv as follows:
+    a. deltaAdd.csv - add annotations
+    b. deltaDel.csv - remove annotations
 6. upload deltaAdd.csv as added annotations and deltaDelete.csv as removed annotations
-7. when we're done, rename latest file as last file
+7. when we're done, rename/copy latestIp.csv to lastIp.csv
 
 we can rinse/repeat for every known bad list that we want to use
 
@@ -67,40 +70,36 @@ def readFromLastBlf(filename):
         last = f.read()
     return(last)
 
-def annotateAndCompareFiles(lastFile,latestFile,addFile,delFile):
-    # read last file into pandas dataframe, add two columns: VRF and Black List
-    # need to parameterize the List name so we can use other BLFs eventually
-    blfheader = ["IP", "VRF", "Black List"]
-    lastdf = pd.read_csv(lastFile, index_col=False, header=None, columns=blfheader)
-    lastdf['Black List'] = "Talos Black List" 
+def compareLastToLatest(lastFile, latestFile):
+    lastIpDf = pd.read_csv(lastFile, index_col=False, header=None)
+    latestIpDf = pd.read_csv(latestFile, index_col=False, header=None)
+    print(lastIpDf)
+    print(latestIpDf)
+    print(lastIpDf.all() == latestIpDf.all())
+
+def annotateThenDelta(lastFile, latestFile, addFile, delFile):
+    # in this we will read the last and latest into dataframes
+    # compare those and if they are the same, we quit
+    # if they are not, then we annotate, then create the delta Add and Delete files
+    # will need to add try/except for IO errors
+    lastdf = pd.read_csv(lastFile, index_col=False, header=None, names=["IP", "BlackList"])
+    lastdf['BlackList'] = "Talos Black List" 
     lastdf['VRF'] = "Default"
-    # read latest file into pandas dataframe, add two columns: VRF and Black List
-    # need to parameterize the List name so we can use other BLFs
-    latestdf = pd.read_csv(latestFile, index_col=False, header=None, columns=blfheader)
-    latestdf['Black List'] = "Talos Black List" 
+    latestdf = pd.read_csv(latestFile, index_col=False, header=None, names=["IP", "BlackList"])
+    latestdf['BlackList'] = "Talos Black List" 
     latestdf['VRF'] = "Default"
-    # write last and latest files with included annotation fields
-    lastdf.to_csv(lastFile, index=False, columns=blfheader)
-    latestdf.to_csv(latestFile, index=False, columns=blfheader)
-    # dump the two files into pandas(memory) and compare
-    # stuff to delete will be in latest-last = deltaDelete
-    # if nothing in last, then all of latest will go into annotations
-    # need to parameterize the column names and stuff so we can use other BLFs eventually
-    # now let's compare if the two dataframes are the same, if so, return an exit code and quit the program
-    if ((lastdf['IP'] == latestdf['IP']).all()):
-        print("*** Last and Latest IP lists are the same, quitting... ***")
-        raise SystemExit
-    # if it's in last but not in latest, delete it
     header = ["IP", "VRF", "Black List"]
+    lastdf.to_csv("last.csv", index=False, columns=header)
+    latestdf.to_csv("latest.csv", index=False, columns=header)
+    
     deltaDeleteDf = lastdf[~lastdf.IP.isin(latestdf.IP)].dropna()
-    deltaDeleteDf = deltaDeleteDf[header]
-    deltaDeleteDf.to_csv(delFile, index=False)
-    # if it's in latest but not in last, add it to the deltaAddFile
     mergeDf = lastdf.merge(latestdf, indicator=True, how='outer')
     deltaAddDf = mergeDf[mergeDf['_merge'] == 'right_only'].ix[:,:-1]
-    deltaAddDf = deltaAddDf[header]
-    deltaAddDf.to_csv(addFile, index=False)
 
+    deltaDeleteDf = deltaDeleteDf[header]
+    deltaDeleteDf.to_csv("deltaDelete.csv", index=False)
+    deltaAddDf = deltaAddDf[header]
+    deltaAddDf.to_csv("deltaAdd.csv", index=False)
 
 
 
@@ -109,10 +108,10 @@ def annotateAndCompareFiles(lastFile,latestFile,addFile,delFile):
 talosBlfUrl = 'https://talosintelligence.com/documents/ip-blacklist'
 # declare names of files 
 # not sure if we should parameterize the last file or not...
-lastTalosBlFile = 'talosblf-last.csv'
+lastTalosBlFile = 'lastTalosIP.csv'
 # these files are only significant DURING an instantiation, don't need to declare outside of script
-latestTalosBlFile = 'talosblf-latest.csv'
-deltaDeleteFile = 'deltaDelete.csv'
+latestTalosBlFile = 'latestTalosIp.csv'
+deltaDelFile = 'deltaDel.csv'
 deltaAddFile = 'deltaAdd.csv'
 
 # call function to grab the BLF from the Talos Reputation Center URL
@@ -130,12 +129,12 @@ except IOError:
 else:
     lastTalosBlf = readFromLastBlf(lastTalosBlFile)
 
-print(lastTalosBlf)
-print(latestTalosBlf)
+# call function to compare last and latest IP lists
+compareLastToLatest(lastTalosBlFile,latestTalosBlFile)
 
-# call function to add annotations to the last and latest files
-# compareFiles(lastBlFile, latestBlFile)
-annotateAndCompareFiles(lastTalosBlFile,latestTalosBlFile,deltaAddFile,deltaDeleteFile)
+# call function to add annotations to the last and latest files then compare them
+# annotateThenDelta(lastBlFile, latestBlFile, deltaAddFile, deltaDelFile)
+
 
 # call function to write the Talos BLF to a file named "talosblf-latest.csv"
 # need to add path Env variable eventually
