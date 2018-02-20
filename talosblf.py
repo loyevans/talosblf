@@ -18,12 +18,10 @@ in future versions and this will become more than just a Talos BLF
 Basic outline of what I want to do here:
 1. if last does not exist, create an empty last file
 2. grab latest list from talos BLF url
-3. load both lists into memory and compare, if no difference, notify and quit program
-4. if there are differences, do this:
-    a. latest-last = talosDeltaAdd.csv
-    b. last-latest = talosDeltaDelete.csv
-5. upload talosDeltaAdd.csv as added annotations 
-6. upload talosDeltaDelete.csv as removed annotations
+3. annotate both last and latest with proper annotation keys and values
+4. load both latest and last into memory and compare. if last and latest are the same, quit & notify
+5. get deltas and write them to csv as follows:
+6. upload deltaAdd.csv as added annotations and deltaDelete.csv as removed annotations
 7. when we're done, rename latest file as last file
 
 we can rinse/repeat for every known bad list that we want to use
@@ -69,31 +67,29 @@ def readFromLastBlf(filename):
         last = f.read()
     return(last)
 
-def annotateFiles(lastFile,latestFile):
+def annotateAndCompareFiles(lastFile,latestFile,addFile,delFile):
     # read last file into pandas dataframe, add two columns: VRF and Black List
     # need to parameterize the List name so we can use other BLFs eventually
-    lastdf = pd.read_csv(lastFile, index_col=False, header=None, names=["IP", "Black List"])
+    blfheader = ["IP", "VRF", "Black List"]
+    lastdf = pd.read_csv(lastFile, index_col=False, header=None, columns=blfheader)
     lastdf['Black List'] = "Talos Black List" 
     lastdf['VRF'] = "Default"
     # read latest file into pandas dataframe, add two columns: VRF and Black List
     # need to parameterize the List name so we can use other BLFs
-    latestdf = pd.read_csv(latestFile, index_col=False, header=None, names=["IP", "Black List"])
+    latestdf = pd.read_csv(latestFile, index_col=False, header=None, columns=blfheader)
     latestdf['Black List'] = "Talos Black List" 
     latestdf['VRF'] = "Default"
     # write last and latest files with included annotation fields
-    header = ["IP", "VRF", "Black List"]
-    lastdf.to_csv(lastFile, index=False, columns=header)
-    latestdf.to_csv(latestFile, index=False, columns=header)
-    
-def getDeltaFiles(lastFile,latestFile,addFile,delFile):
+    lastdf.to_csv(lastFile, index=False, columns=blfheader)
+    latestdf.to_csv(latestFile, index=False, columns=blfheader)
     # dump the two files into pandas(memory) and compare
     # stuff to delete will be in latest-last = deltaDelete
     # if nothing in last, then all of latest will go into annotations
     # need to parameterize the column names and stuff so we can use other BLFs eventually
-    # read last file into pandas dataframe
-    lastdf = pd.read_csv(lastFile, index_col=False, header=None, names=["IP", "VRF", "Black List"])
-    # read latest file into pandas dataframe
-    latestdf = pd.read_csv(latestFile, index_col=False, header=None, names=["IP", "VRF", "Black List"])
+    # now let's compare if the two dataframes are the same, if so, return an exit code and quit the program
+    if ((lastdf['IP'] == latestdf['IP']).all()):
+        print("*** Last and Latest IP lists are the same, quitting... ***")
+        raise SystemExit
     # if it's in last but not in latest, delete it
     header = ["IP", "VRF", "Black List"]
     deltaDeleteDf = lastdf[~lastdf.IP.isin(latestdf.IP)].dropna()
@@ -111,18 +107,20 @@ def getDeltaFiles(lastFile,latestFile,addFile,delFile):
 # make talosBlfUrl an ENV variable at some point??
 # need to parameterize the Talos BLF URL as a var
 talosBlfUrl = 'https://talosintelligence.com/documents/ip-blacklist'
-
-latestTalosBlFile = 'talosblf-latest.csv'
+# declare names of files 
+# not sure if we should parameterize the last file or not...
 lastTalosBlFile = 'talosblf-last.csv'
+# these files are only significant DURING an instantiation, don't need to declare outside of script
+latestTalosBlFile = 'talosblf-latest.csv'
 deltaDeleteFile = 'deltaDelete.csv'
 deltaAddFile = 'deltaAdd.csv'
 
 # call function to grab the BLF from the Talos Reputation Center URL
 latestTalosBlf = (getBlf(talosBlfUrl))
 
-# check to see if last exists, if not, read latest and name it first
-# call function to read the last BLF that was used from the previous script run
-# declare file path in ENV var
+# check to see if last exists, if not, create an empty one
+# if last existst, call function to read the last BLF 
+# we should declare file path in ENV var to pull from the ecoHub
 try:
     check=open(lastTalosBlFile,'r')
 except IOError:
@@ -132,21 +130,16 @@ except IOError:
 else:
     lastTalosBlf = readFromLastBlf(lastTalosBlFile)
 
+print(lastTalosBlf)
+print(latestTalosBlf)
+
 # call function to add annotations to the last and latest files
 # compareFiles(lastBlFile, latestBlFile)
-annotateFiles(lastTalosBlFile,latestTalosBlFile)
-
-# call function to compare and pull out deltas and write thost to csv
-# need to add try/except for io errors
-getDeltaFiles(lastTalosBlFile,latestTalosBlFile,deltaAddFile,deltaDeleteFile)
-
+annotateAndCompareFiles(lastTalosBlFile,latestTalosBlFile,deltaAddFile,deltaDeleteFile)
 
 # call function to write the Talos BLF to a file named "talosblf-latest.csv"
 # need to add path Env variable eventually
-writeToLatestBlf(latestTalosBlf,latestTalosBlFile)
-
-# compare last and latest Talos BLFs
-# restults from this should be dict of talosDeltaDelete and talosDeltaAdd
+#writeToLatestBlf(latestTalosBlf,latestTalosBlFile)
 
 # call function to dump annotations into Tetration
 
