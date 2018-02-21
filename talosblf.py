@@ -70,14 +70,15 @@ def readFromLastBlf(filename):
         last = f.read()
     return(last)
 
-def compareLastToLatest(lastFile, latestFile):
-    lastIpDf = pd.read_csv(lastFile, index_col=False, header=None)
-    latestIpDf = pd.read_csv(latestFile, index_col=False, header=None)
-    print(lastIpDf)
-    print(latestIpDf)
-    print(lastIpDf.all() == latestIpDf.all())
+def areLastAndLatestSame(lastFile, latestFile):
+    lastIpSet = set(pd.read_csv(lastFile, index_col=False, header=None)[0])
+    latestIpSet = set(pd.read_csv(latestFile, index_col=False, header=None)[0])
+    # print(lastIpSet)
+    # print(latestIpSet)
+    # print(lastIpSet == latestIpSet)
+    return(lastIpSet == latestIpSet)
 
-def annotateThenDelta(lastFile, latestFile, addFile, delFile):
+def annotationsAndDeltas(lastFile, latestFile, addFile, delFile):
     # in this we will read the last and latest into dataframes
     # compare those and if they are the same, we quit
     # if they are not, then we annotate, then create the delta Add and Delete files
@@ -101,21 +102,27 @@ def annotateThenDelta(lastFile, latestFile, addFile, delFile):
     deltaAddDf = deltaAddDf[header]
     deltaAddDf.to_csv("deltaAdd.csv", index=False)
 
+def uploadAdditions(tetEndpoint, tetKey, tetSecret, addFile):
+    # upload added annotations to tetration
 
+def uploadDeletions(tetEndpoint, tetKey, tetSecret, delFile):
+    # upload added annotations to tetration
 
 # make talosBlfUrl an ENV variable at some point??
 # need to parameterize the Talos BLF URL as a var
 talosBlfUrl = 'https://talosintelligence.com/documents/ip-blacklist'
 # declare names of files 
 # not sure if we should parameterize the last file or not...
-lastTalosBlFile = 'lastTalosIP.csv'
+lastTalosBlFile = 'lastTalosIp.csv'
 # these files are only significant DURING an instantiation, don't need to declare outside of script
 latestTalosBlFile = 'latestTalosIp.csv'
+tempAnnotationsFile = ''
 deltaDelFile = 'deltaDel.csv'
 deltaAddFile = 'deltaAdd.csv'
 
 # call function to grab the BLF from the Talos Reputation Center URL
 latestTalosBlf = (getBlf(talosBlfUrl))
+
 
 # check to see if last exists, if not, create an empty one
 # if last existst, call function to read the last BLF 
@@ -129,18 +136,21 @@ except IOError:
 else:
     lastTalosBlf = readFromLastBlf(lastTalosBlFile)
 
-# call function to compare last and latest IP lists
-compareLastToLatest(lastTalosBlFile,latestTalosBlFile)
+# check a function that compares the two IP lists, if they match, no need to go on
+if (areLastAndLatestSame(lastTalosBlFile, latestTalosBlFile)):
+    print("Files are the same, nothing to do. Exiting...")
+    SystemExit
+print("Files are different, let's do some annotating...")
 
 # call function to add annotations to the last and latest files then compare them
-# annotateThenDelta(lastBlFile, latestBlFile, deltaAddFile, deltaDelFile)
+annotationsAndDeltas(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
 
+# call function to upload add annotations file to tetration
+uploadAdditions(deltaAddFile)
 
-# call function to write the Talos BLF to a file named "talosblf-latest.csv"
-# need to add path Env variable eventually
-#writeToLatestBlf(latestTalosBlf,latestTalosBlFile)
+# call function to upload delete annotations file to tetration 
+uploadDeletions(deltaDelFile)
 
-# call function to dump annotations into Tetration
 
 # save current annotations to a file named "talosblf-last.csv"
 # this file will be used in the next iteration 

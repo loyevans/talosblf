@@ -12,11 +12,11 @@ def getDeltaFiles(lastfile,latestfile,delFile):
     # if nothing in last, then all of latest will go into 
 
     # read in 
-    lastdf = pd.read_csv(lastfile, index_col=False, header=None, names=["IP", "Black List"])
-    lastdf['Black List'] = "Talos Black List" 
+    lastdf = pd.read_csv(lastfile, index_col=False, header=None, names=["IP", "BlackList"])
+    lastdf['BlackList'] = "Talos Black List" 
     lastdf['VRF'] = "Default"
-    latestdf = pd.read_csv(latestfile, index_col=False, header=None, names=["IP", "Black List"])
-    latestdf['Black List'] = "Talos Black List" 
+    latestdf = pd.read_csv(latestfile, index_col=False, header=None, names=["IP", "BlackList"])
+    latestdf['BlackList'] = "Talos Black List" 
     latestdf['VRF'] = "Default"
     header = ["IP", "VRF", "Black List"]
     lastdf.to_csv("last.csv", index=False, columns=header)
