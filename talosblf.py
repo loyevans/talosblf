@@ -2,6 +2,7 @@ import json
 import os
 import requests
 import tetpyclient
+from tetpyclient import RestClient
 import csv
 import pandas as pd 
 import numpy as np
@@ -40,8 +41,13 @@ TETRATION_VRF
 
 '''
 
+# create tetration rest client
+def createRestClient(tetEndpoint, tetKey, tetSecret):
+    rc = RestClient(tetEndpoint, api_key=tetKey, api_secret=tetSecret, verify=False)
+    return rc
+
 # the function getblf will grab a blf from a url 
-def getBlf(url):
+def getBlf(url, latestFile):
     # need to put in try/excecpt function for something other than 200 response code
     blf = requests.get(url)
     return (blf.content)
@@ -51,7 +57,7 @@ def writeToLatestBlf(content,filename):
     # write the BLF to a file named by filename parm
     # will need to put an ENV variable for the public folder path on the ecoHub
     # need to put try/except for io errors
-    with open(filename,'w') as f:
+    with open(filename,'wb') as f:
         f.write(content)
 
 def writeToLastBlf(content,filename):
@@ -73,9 +79,6 @@ def readFromLastBlf(filename):
 def areLastAndLatestSame(lastFile, latestFile):
     lastIpSet = set(pd.read_csv(lastFile, index_col=False, header=None)[0])
     latestIpSet = set(pd.read_csv(latestFile, index_col=False, header=None)[0])
-    # print(lastIpSet)
-    # print(latestIpSet)
-    # print(lastIpSet == latestIpSet)
     return(lastIpSet == latestIpSet)
 
 def annotationsAndDeltas(lastFile, latestFile, addFile, delFile):
@@ -84,14 +87,14 @@ def annotationsAndDeltas(lastFile, latestFile, addFile, delFile):
     # if they are not, then we annotate, then create the delta Add and Delete files
     # will need to add try/except for IO errors
     lastdf = pd.read_csv(lastFile, index_col=False, header=None, names=["IP", "BlackList"])
-    lastdf['BlackList'] = "Talos Black List" 
-    lastdf['VRF'] = "Default"
+    lastdf["BlackList"] = "Talos Black List" 
+    lastdf["VRF"] = "Default"
     latestdf = pd.read_csv(latestFile, index_col=False, header=None, names=["IP", "BlackList"])
-    latestdf['BlackList'] = "Talos Black List" 
-    latestdf['VRF'] = "Default"
-    header = ["IP", "VRF", "Black List"]
-    lastdf.to_csv("last.csv", index=False, columns=header)
-    latestdf.to_csv("latest.csv", index=False, columns=header)
+    latestdf["BlackList"] = "Talos Black List" 
+    latestdf["VRF"] = "Default"
+    header = ["IP", "VRF", "BlackList"]
+    lastdf.to_csv("templast.csv", index=False, columns=header)
+    latestdf.to_csv("templatest.csv", index=False, columns=header)
     
     deltaDeleteDf = lastdf[~lastdf.IP.isin(latestdf.IP)].dropna()
     mergeDf = lastdf.merge(latestdf, indicator=True, how='outer')
@@ -102,30 +105,78 @@ def annotationsAndDeltas(lastFile, latestFile, addFile, delFile):
     deltaAddDf = deltaAddDf[header]
     deltaAddDf.to_csv("deltaAdd.csv", index=False)
 
-def uploadAdditions(tetEndpoint, tetKey, tetSecret, addFile):
+def uploadAdditions(rc, addFile):
     # upload added annotations to tetration
+    keys = ['IP', 'VRF']
+    req_payload = [tetpyclient.MultiPartOption(key='X-Tetration-Key', val=keys), tetpyclient.MultiPartOption(key='X-Tetration-Oper', val='add')]
+    resp = rc.upload(addFile, '/assets/cmdb/upload', req_payload)
+    if resp.status_code != 200:
+        print("Error posting annotations to Tetration cluster")
+        print(resp.status_code)
+        print(resp.text)
+    else:
+        print("Successfully posted annotations to Tetration cluster")
 
-def uploadDeletions(tetEndpoint, tetKey, tetSecret, delFile):
+def uploadDeletions(rc, delFile):
     # upload added annotations to tetration
+    keys = ['IP', 'VRF']
+    req_payload = [tetpyclient.MultiPartOption(key='X-Tetration-Key', val=keys), tetpyclient.MultiPartOption(key='X-Tetration-Oper', val='delete')]
+    resp = rc.upload(delFile, '/assets/cmdb/upload', req_payload)
+    if resp.status_code != 200:
+        print("Error posting annotations to Tetration cluster")
+        print(resp.status_code)
+        print(resp.text)
+    else:
+        print("Successfully posted annotations to Tetration cluster")
+
+def fileCleanUp(lastFile, latestFile, deltaAddFile, deltaDelFile):
+    os.remove(lastFile)
+    os.rename(latestFile, lastFile)
+    os.remove(deltaAddFile)
+    os.remove(deltaDelFile)
+    
+
+''' 
+-----------------------------------------------------------
+ begin globals section
+-----------------------------------------------------------
+'''
 
 # make talosBlfUrl an ENV variable at some point??
 # need to parameterize the Talos BLF URL as a var
 talosBlfUrl = 'https://talosintelligence.com/documents/ip-blacklist'
 # declare names of files 
-# not sure if we should parameterize the last file or not...
+# need to parameterize the lastTalosBLFile - it should persist
 lastTalosBlFile = 'lastTalosIp.csv'
 # these files are only significant DURING an instantiation, don't need to declare outside of script
 latestTalosBlFile = 'latestTalosIp.csv'
-tempAnnotationsFile = ''
 deltaDelFile = 'deltaDel.csv'
 deltaAddFile = 'deltaAdd.csv'
 
-# call function to grab the BLF from the Talos Reputation Center URL
-latestTalosBlf = (getBlf(talosBlfUrl))
+tetrationEndpoint = 'https://perseus-aus.cisco.com'
+oldtetrationKey = '556f86c494d34ffc8063b0845c300de1'
+oldtetrationSecret = 'a6a97010c6cba633d7ddbf10d8df40eb8d25484'
+tetrationKey = 'a0d9299aaf7a49cab92150aaf2f7e50b'
+tetrationSecret = '14ae32d279489ab5cc67b73b6777bdcc963b4817'
 
+requests.urllib3.disable_warnings()
+
+''' 
+-----------------------------------------------------------
+ end globals section
+-----------------------------------------------------------
+'''
+# initialize rc client
+rc = createRestClient(tetrationEndpoint, tetrationKey, tetrationSecret)
+
+# call function to grab the BLF from the Talos Reputation Center URL
+latestTalosBlf = (getBlf(talosBlfUrl, latestTalosBlFile))
+writeToLatestBlf(latestTalosBlf, latestTalosBlFile)
 
 # check to see if last exists, if not, create an empty one
 # if last existst, call function to read the last BLF 
+# get annotated facets?
+# set annotated facets?
 # we should declare file path in ENV var to pull from the ecoHub
 try:
     check=open(lastTalosBlFile,'r')
@@ -136,23 +187,25 @@ except IOError:
 else:
     lastTalosBlf = readFromLastBlf(lastTalosBlFile)
 
-# check a function that compares the two IP lists, if they match, no need to go on
-if (areLastAndLatestSame(lastTalosBlFile, latestTalosBlFile)):
-    print("Files are the same, nothing to do. Exiting...")
-    SystemExit
+# check to see if last is empty, then run a check function that compares the 
+# two IP lists, if they match, no need to go on
+if not (os.stat(lastTalosBlFile).st_size==0):
+    if (areLastAndLatestSame(lastTalosBlFile, latestTalosBlFile)):
+        print("Files are the same, nothing to do. Exiting...")
+        SystemExit
 print("Files are different, let's do some annotating...")
 
 # call function to add annotations to the last and latest files then compare them
 annotationsAndDeltas(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
 
 # call function to upload add annotations file to tetration
-uploadAdditions(deltaAddFile)
+uploadAdditions(rc, deltaAddFile)
 
 # call function to upload delete annotations file to tetration 
-uploadDeletions(deltaDelFile)
+uploadDeletions(rc, deltaAddFile)
 
 
 # save current annotations to a file named "talosblf-last.csv"
 # this file will be used in the next iteration 
-# writeToLastTalosBlf(talosBlfContent)
+fileCleanUp(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
 

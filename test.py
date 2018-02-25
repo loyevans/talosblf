@@ -2,6 +2,7 @@ import json
 import os
 import requests
 import tetpyclient
+from tetpyclient import RestClient
 import csv
 import pandas as pd 
 import numpy as np
@@ -32,7 +33,35 @@ def getDeltaFiles(lastfile,latestfile,delFile):
     deltaAddDf.to_csv("deltaAdd.csv", index=False)
     
     
+# create tetration rest client
+def createRestClient(tetEndpoint, tetKey, tetSecret):
+    rc = RestClient(tetEndpoint, api_key=tetKey, api_secret=tetSecret, verify=False)
+    return rc
 
+
+def uploadDeletions(rc, delFile):
+    # upload added annotations to tetration
+    keys = ['IP', 'VRF', 'BlackList']
+    req_payload = [tetpyclient.MultiPartOption(key='X-Tetration-Key', val=keys), tetpyclient.MultiPartOption(key='X-Tetration-Oper', val='delete')]
+    resp = rc.upload(delFile, '/assets/cmdb/upload', req_payload)
+    if resp.status_code != 200:
+        print("Error posting annotations to Tetration cluster")
+    else:
+        print(resp.text)
+        print("Successfully posted annotations to Tetration cluster")
+
+def getUsers(rc):
+    resp = rc.get('/users')
+    print(resp.text)
+
+def getFacets(rc):
+    resp = rc.get('/assets/cmdb/annotations/Default')
+    if resp.status_code != 200:
+        print("Error getting annotations from Tetration cluster")
+        print(resp.status_code)
+        print(resp.text)
+    else:
+        print(resp.text)
 
 
 # code block from Brandon Beck - he's FUCKING awesome
@@ -46,8 +75,22 @@ annotationUpdates = json.loads(body)
     removeIPList = existing_df[~existing_df.IP.isin(update_df.IP)]['IP'].dropna().T.to_dict().values()
     merged = existing_df.merge(update_df, indicator=True, how='outer')
     updateList = merged[merged['_merge'] == 'right_only'].ix[:,:-1].T.to_dict().values()
-
 '''
 
+#getDeltaFiles('talosblf-last.csv','talosblf-latest.csv','deltaDeleteFile.csv')
 
-getDeltaFiles('talosblf-last.csv','talosblf-latest.csv','deltaDeleteFile.csv')
+
+tetrationEndpoint = 'https://perseus-aus.cisco.com'
+tetrationKey1 = '556f86c494d34ffc8063b0845c300de1'
+tetrationSecret1 = 'a6a97010c6cba633d7ddbf10d8df40eb8d25484'
+tetKey2 = 'a0d9299aaf7a49cab92150aaf2f7e50b'
+tetSecret2 = '14ae32d279489ab5cc67b73b6777bdcc963b4817'
+
+requests.urllib3.disable_warnings
+
+# initialize rc client
+rc = createRestClient(tetrationEndpoint, tetKey2, tetSecret2)
+
+# getUsers(rc)
+getFacets(rc)
+
