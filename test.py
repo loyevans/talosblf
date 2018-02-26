@@ -55,7 +55,7 @@ def getUsers(rc):
     print(resp.text)
 
 def getFacets(rc):
-    resp = rc.get('/assets/cmdb/annotations/Default')
+    resp = rc.get('/assets/cmdb/annotations/default')
     if resp.status_code != 200:
         print("Error getting annotations from Tetration cluster")
         print(resp.status_code)

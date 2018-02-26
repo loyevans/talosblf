@@ -1,6 +1,6 @@
-# ecohub Tetration/Infoblox integration
+# ecohub Tetration/Talos BlackList File integration
 
-This repository contains the code required to implement an integration of the Talos IP Blacklist File with Cisco Tetration. It's purpose is to download the blf and inject it into Tetration with annotations showing the IPs live on the Talos Blacklist.
+This repository contains the code required to implement an integration of a Talos IP Blacklist File with Cisco Tetration. It's purpose is to download the blf and inject it into Tetration with annotations showing recent IPs live on the Talos Blacklist.
 
 There are several scripts in this repository that interface with the TalosBLF download feed and the Tetration APIs to perform the functionality. All of the dependencies and the *Dockerfile* to package this repository are included here. **All of the scripts** in this repository rely on **environment variables** to pass arguments to each script.
 
