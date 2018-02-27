@@ -150,11 +150,12 @@ def checkBlfFacet(rc):
             rc.put('/assets/cmdb/annotations/Default', json_body=json.dumps(req_payload))
 
 def fileCleanUp(lastFile, latestFile, deltaAddFile, deltaDelFile):
-    os.remove(lastFile)
-    os.rename(latestFile, lastFile)
+    os.remove('templast.csv')
+    os.remove('templatest.csv')
     os.remove(deltaAddFile)
     os.remove(deltaDelFile)
-
+    os.remove(lastFile)
+    os.rename(latestFile, lastFile)
 
 
 ''' 
@@ -229,5 +230,5 @@ checkBlfFacet(rc)
 
 # save current annotations to a file named "talosblf-last.csv"
 # this file will be used in the next iteration 
-## fileCleanUp(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
+fileCleanUp(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
 
