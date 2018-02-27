@@ -115,7 +115,9 @@ def uploadAdditions(rc, addFile):
         print(resp.status_code)
         print(resp.text)
     else:
-        print("Successfully posted annotations to Tetration cluster")
+        print(resp.status_code)
+        print(resp.text)
+        print("Successfully posted additions to Tetration cluster using file", addFile)
 
 def uploadDeletions(rc, delFile):
     # upload added annotations to tetration
@@ -127,14 +129,33 @@ def uploadDeletions(rc, delFile):
         print(resp.status_code)
         print(resp.text)
     else:
-        print("Successfully posted annotations to Tetration cluster")
+        print(resp.status_code)
+        print(resp.text)
+        print("Successfully posted deletions to Tetration cluster using file", delFile)
+    
+def checkBlfFacet(rc):
+    resp = rc.get('/assets/cmdb/annotations/default')
+    if resp.status_code != 200:
+        print("Error getting annotations from Tetration cluster:", resp.status_code, resp.text)
+        print(resp.status_code)
+        print(resp.text)
+    else:
+        facetsList = resp.text
+        if "BlackList" in (facetsList):
+            print ("BlackList is already enabled, moving on")
+        else:
+            print("BlackList is not enabled, enabling")
+            facetsList.append("BlackList")
+            req_payload = facetsList
+            rc.put('/assets/cmdb/annotations/Default', json_body=json.dumps(req_payload))
 
 def fileCleanUp(lastFile, latestFile, deltaAddFile, deltaDelFile):
     os.remove(lastFile)
     os.rename(latestFile, lastFile)
     os.remove(deltaAddFile)
     os.remove(deltaDelFile)
-    
+
+
 
 ''' 
 -----------------------------------------------------------
@@ -174,9 +195,7 @@ latestTalosBlf = (getBlf(talosBlfUrl, latestTalosBlFile))
 writeToLatestBlf(latestTalosBlf, latestTalosBlFile)
 
 # check to see if last exists, if not, create an empty one
-# if last existst, call function to read the last BLF 
-# get annotated facets?
-# set annotated facets?
+# if last existst, call function to read the last BLF
 # we should declare file path in ENV var to pull from the ecoHub
 try:
     check=open(lastTalosBlFile,'r')
@@ -198,14 +217,17 @@ print("Files are different, let's do some annotating...")
 # call function to add annotations to the last and latest files then compare them
 annotationsAndDeltas(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
 
-# call function to upload add annotations file to tetration
-uploadAdditions(rc, deltaAddFile)
-
 # call function to upload delete annotations file to tetration 
 uploadDeletions(rc, deltaAddFile)
 
+# call function to upload add annotations file to tetration
+uploadAdditions(rc, deltaAddFile)
+
+
+# Check to see if the BlackList annotation has been enabled in the annotation facets, if not, enable it
+checkBlfFacet(rc)
 
 # save current annotations to a file named "talosblf-last.csv"
 # this file will be used in the next iteration 
-fileCleanUp(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
+## fileCleanUp(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
 

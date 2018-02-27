@@ -61,7 +61,35 @@ def getFacets(rc):
         print(resp.status_code)
         print(resp.text)
     else:
+        facetsList = resp.text
+        print(facetsList)
+        if "BlackList" in (facetsList):
+            print ("It's in there, moving the fuck on")
+        else:
+            print("Nope, I don't see it, appending")
+            facetsList.append("BlackList")
+            req_payload = facetsList
+            rc.put('/assets/cmdb/annotations/Default', json_body=json.dumps(req_payload))
+
+def addBlfFacet(rc):
+    resp = rc.get('/assets/cmdb/annotations/default')
+    if resp.status_code != 200:
+        print("Error getting annotations from Tetration cluster")
+        print(resp.status_code)
         print(resp.text)
+    else:
+        facetsList = resp.text
+        print(facetsList)
+        if "BlackList" in (facetsList):
+            print ("It's in there, moving the fuck on")
+        else:
+            print("Nope, I don't see it, appending")
+            facetsList.append("BlackList")
+            req_payload = facetsList
+            rc.put('/assets/cmdb/annotations/Default', json_body=json.dumps(req_payload))
+
+
+
 
 
 # code block from Brandon Beck - he's FUCKING awesome
@@ -92,5 +120,19 @@ requests.urllib3.disable_warnings
 rc = createRestClient(tetrationEndpoint, tetKey2, tetSecret2)
 
 # getUsers(rc)
-getFacets(rc)
+#getFacets(rc)
+#addBlfFacet(rc)
+#getFacets(rc)
+
+keys = ['IP', 'VRF']
+req_payload = [tetpyclient.MultiPartOption(key='X-Tetration-Key', val=keys), tetpyclient.MultiPartOption(key='X-Tetration-Oper', val='add')]
+resp = rc.upload('deltaAdd.csv', '/assets/cmdb/upload', req_payload)
+if resp.status_code != 200:
+    print("Error posting annotations to Tetration cluster")
+    print(resp.status_code)
+    print(resp.text)
+else:
+    print(resp.status_code)
+    print(resp.text)
+    print("Successfully posted additions to Tetration cluster using file")
 
