@@ -101,9 +101,9 @@ def annotationsAndDeltas(lastFile, latestFile, addFile, delFile):
     deltaAddDf = mergeDf[mergeDf['_merge'] == 'right_only'].ix[:,:-1]
 
     deltaDeleteDf = deltaDeleteDf[header]
-    deltaDeleteDf.to_csv(deltaDelFile, index=False)
+    deltaDeleteDf.to_csv(delFile, index=False)
     deltaAddDf = deltaAddDf[header]
-    deltaAddDf.to_csv(deltaAddFile, index=False)
+    deltaAddDf.to_csv(addFile, index=False)
 
 def uploadAdditions(rc, addFile):
     # upload added annotations to tetration
