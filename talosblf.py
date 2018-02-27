@@ -101,9 +101,9 @@ def annotationsAndDeltas(lastFile, latestFile, addFile, delFile):
     deltaAddDf = mergeDf[mergeDf['_merge'] == 'right_only'].ix[:,:-1]
 
     deltaDeleteDf = deltaDeleteDf[header]
-    deltaDeleteDf.to_csv("deltaDelete.csv", index=False)
+    deltaDeleteDf.to_csv(deltaDelFile, index=False)
     deltaAddDf = deltaAddDf[header]
-    deltaAddDf.to_csv("deltaAdd.csv", index=False)
+    deltaAddDf.to_csv(deltaAddFile, index=False)
 
 def uploadAdditions(rc, addFile):
     # upload added annotations to tetration
@@ -219,7 +219,7 @@ print("Files are different, let's do some annotating...")
 annotationsAndDeltas(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
 
 # call function to upload delete annotations file to tetration 
-uploadDeletions(rc, deltaAddFile)
+uploadDeletions(rc, deltaDelFile)
 
 # call function to upload add annotations file to tetration
 uploadAdditions(rc, deltaAddFile)
@@ -231,4 +231,3 @@ checkBlfFacet(rc)
 # save current annotations to a file named "talosblf-last.csv"
 # this file will be used in the next iteration 
 fileCleanUp(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
-
