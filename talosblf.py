@@ -218,12 +218,11 @@ print("Files are different, let's do some annotating...")
 # call function to add annotations to the last and latest files then compare them
 annotationsAndDeltas(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
 
-# call function to upload delete annotations file to tetration 
-uploadDeletions(rc, deltaDelFile)
-
 # call function to upload add annotations file to tetration
 uploadAdditions(rc, deltaAddFile)
 
+# call function to upload delete annotations file to tetration 
+uploadDeletions(rc, deltaDelFile)
 
 # Check to see if the BlackList annotation has been enabled in the annotation facets, if not, enable it
 checkBlfFacet(rc)
