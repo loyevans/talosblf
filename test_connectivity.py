@@ -7,26 +7,23 @@ endpoints. The bulk of the work in this script is handling all of the
 errors that might arise.
 
 Author: Doron Chosnek, Cisco Systems, February 2018
-"""
 
-# pylint: disable=invalid-name
+Modified for Python3 by: Loy Evans, Cisco Systems, February 2018
+
+"""
 
 import json
 import os
-import requests.packages.urllib3
+import requests
 
 # needed for Tetration
 from tetpyclient import RestClient
-
-# needed for Infoblox
-from infoblox_client import connector
-from infoblox_client import exceptions as ib_e
 
 # ============================================================================
 # Functions
 # ----------------------------------------------------------------------------
 
-def test_infoblox():
+def testTalos():
     '''
     Function attempts to connect to Infoblox. Arguments are retrieved from
     environment variables. The bulk of the work in this function is error
@@ -34,33 +31,11 @@ def test_infoblox():
     (which will be an empty string if there are no errors)
     '''
 
-    # defaults are document here:
-    # https://github.com/infobloxopen/infoblox-client/blob/master/infoblox_client/connector.py
-    infoblox_opts = {
-        'host': os.environ['INFOBLOX_HOST'],
-        'username': os.environ['INFOBLOX_USER'],
-        'password': os.environ['INFOBLOX_PWD'],
-        'ssl_verify': False,
-        'silent_ssl_warnings': True, # change from default
-        'http_request_timeout': 3,   # change from default
-        'http_pool_connections': 10,
-        'http_pool_maxsize': 10,
-        'max_retries': 2,            # change from default
-        'wapi_version': os.environ['INFOBLOX_WAPI_VERSION'],
-        'max_results': 2,            # change from default
-        'log_api_calls_as_info': False,
-        'paging': False
-    }
 
     status = 100
     return_msg = "Infoblox connectivity verified."
-    conn = connector.Connector(infoblox_opts)
-
     try:
-        result = conn.get_object('networkview')
-    except ib_e.InfobloxBadWAPICredential:
-        return_msg = "Infoblox: invalid credentials"
-        status = 400
+        result = requests.get(talosBlfUrl)
     except ib_e.InfobloxTimeoutError:
         return_msg = "Infoblox: timeout"
         status = 400
@@ -97,11 +72,10 @@ def test_tetration():
         verify=False
     )
 
-    requests.packages.urllib3.disable_warnings()
+    requests.urllib3.disable_warnings()
 
     try:
         resp = restclient.get('/openapi/v1/filters/inventories')
-
     # most likely a DNS issue
     except requests.exceptions.ConnectionError as c_error:
         status = 404

@@ -6,6 +6,7 @@ from tetpyclient import RestClient
 import csv
 import pandas as pd 
 import numpy as np
+import csvdiff
 
 def getDeltaFiles(lastfile,latestfile,delFile):
     # dump the two files into pandas(memory) and compare
@@ -88,6 +89,45 @@ def addBlfFacet(rc):
             req_payload = facetsList
             rc.put('/assets/cmdb/annotations/Default', json_body=json.dumps(req_payload))
 
+def checkCsvContent(csvFile):
+    nRowCsvIterate = 0
+    with open(csvFile, 'r') as countFile:
+        csv_rows = csv.reader(countFile)
+        for row in csv_rows:
+            if len(row) > 0:
+                # print(len(row))
+                # print(row)
+                nRowCsvIterate += 1
+    print("number of rows iterated with csv.reader:", nRowCsvIterate)
+    if nRowCsvIterate > 1:
+        print("I'd upload some stuff now.")
+    else:
+        print("I would NOT upload anything now.")
+    
+def compareCsvFiles(oneFile, twoFile, delfile, addfile):
+    nRowCsvIterate = 0
+    with open(oneFile, 'r') as fileOne, open(twoFile, 'r') as fileTwo:
+        rowsFromOne = csv.reader(fileOne)
+        rowsFromTwo = csv.reader(fileTwo)
+        diff = csvdiff(fileOne, fileTwo)
+        print(diff)
+        
+
+        # for row in csv_rows:
+        #     if len(row) > 0:
+        #         # print(len(row))
+        #         # print(row)
+        #         nRowCsvIterate += 1
+
+
+
+
+
+
+
+        
+    
+
 
 
 
@@ -117,13 +157,14 @@ tetSecret2 = '14ae32d279489ab5cc67b73b6777bdcc963b4817'
 requests.urllib3.disable_warnings
 
 # initialize rc client
-rc = createRestClient(tetrationEndpoint, tetKey2, tetSecret2)
+#rc = createRestClient(tetrationEndpoint, tetKey2, tetSecret2)
 
-# getUsers(rc)
+#getUsers(rc)
 #getFacets(rc)
 #addBlfFacet(rc)
 #getFacets(rc)
 
+''' test add
 keys = ['IP', 'VRF']
 req_payload = [tetpyclient.MultiPartOption(key='X-Tetration-Key', val=keys), tetpyclient.MultiPartOption(key='X-Tetration-Oper', val='add')]
 resp = rc.upload('deltaAdd.csv', '/assets/cmdb/upload', req_payload)
@@ -135,4 +176,22 @@ else:
     print(resp.status_code)
     print(resp.text)
     print("Successfully posted additions to Tetration cluster using file")
+'''
 
+''' test del
+keys = ['IP', 'VRF']
+req_payload = [tetpyclient.MultiPartOption(key='X-Tetration-Key', val=keys), tetpyclient.MultiPartOption(key='X-Tetration-Oper', val='delete')]
+resp = rc.upload('deltaDelete.csv', '/assets/cmdb/upload', req_payload)
+if resp.status_code != 200:
+    print("Error posting annotations to Tetration cluster")
+    print(resp.status_code)
+    print(resp.text)
+else:
+    print(resp.status_code)
+    print(resp.text)
+    print("Successfully posted additions to Tetration cluster using file")
+'''
+
+checkCsvContent('test2.csv')
+
+compareCsvFiles('test.csv', 'test2.csv','testdel.csv', 'testadd.csv')

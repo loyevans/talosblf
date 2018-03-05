@@ -229,4 +229,4 @@ checkBlfFacet(rc)
 
 # save current annotations to a file named "talosblf-last.csv"
 # this file will be used in the next iteration 
-fileCleanUp(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
+# fileCleanUp(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
