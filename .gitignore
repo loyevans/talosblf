@@ -5,6 +5,7 @@ test.csv
 test2.csv
 deltaAdd.csv
 deltaDelete.csv
+deltaDel.csv
 talosblf-latest.csv
 sample*.csv
 lastTalosIp.csv
