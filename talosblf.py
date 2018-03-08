@@ -132,7 +132,24 @@ def uploadDeletions(rc, delFile):
         print(resp.status_code)
         print(resp.text)
         print("Successfully posted deletions to Tetration cluster using file", delFile)
-    
+
+def checkCsvContent(csvFile):
+    nRowCsvIterate = 0
+    with open(csvFile, 'r') as countFile:
+        csv_rows = csv.reader(countFile)
+        for row in csv_rows:
+            if len(row) > 0:
+                # print(len(row))
+                # print(row)
+                nRowCsvIterate += 1
+    print("number of rows iterated with csv.reader:", nRowCsvIterate)
+    if nRowCsvIterate > 1:
+        return(True)
+        #print("I'd upload some stuff now.")
+    else:
+        return(False)
+        #print("I would NOT upload anything now.")
+
 def checkBlfFacet(rc):
     resp = rc.get('/assets/cmdb/annotations/default')
     if resp.status_code != 200:
@@ -175,11 +192,17 @@ latestTalosBlFile = 'latestTalosIp.csv'
 deltaDelFile = 'deltaDel.csv'
 deltaAddFile = 'deltaAdd.csv'
 
+# perseus endpoint and keys
+''' 
 tetrationEndpoint = 'https://perseus-aus.cisco.com'
-oldtetrationKey = '556f86c494d34ffc8063b0845c300de1'
-oldtetrationSecret = 'a6a97010c6cba633d7ddbf10d8df40eb8d25484'
 tetrationKey = 'a0d9299aaf7a49cab92150aaf2f7e50b'
 tetrationSecret = '14ae32d279489ab5cc67b73b6777bdcc963b4817'
+'''
+
+# andromeda endpoint and keys
+tetrationEndpoint = 'https://andromeda.auslab.cisco.com'
+tetrationKey = '566a39a28ef74775a16b650dd6b5359d'
+tetrationSecret = '4363de8f75d4e374ad64034b14fe2951e0d34bed'
 
 requests.urllib3.disable_warnings()
 
@@ -190,6 +213,7 @@ requests.urllib3.disable_warnings()
 '''
 # initialize rc client
 rc = createRestClient(tetrationEndpoint, tetrationKey, tetrationSecret)
+
 
 # call function to grab the BLF from the Talos Reputation Center URL
 latestTalosBlf = (getBlf(talosBlfUrl, latestTalosBlFile))
@@ -222,10 +246,12 @@ annotationsAndDeltas(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelF
 uploadAdditions(rc, deltaAddFile)
 
 # call function to upload delete annotations file to tetration 
-uploadDeletions(rc, deltaDelFile)
+if checkCsvContent(deltaDelFile):
+    uploadDeletions(rc, deltaDelFile)
 
 # Check to see if the BlackList annotation has been enabled in the annotation facets, if not, enable it
-checkBlfFacet(rc)
+# this may not be needed any more... ?
+# checkBlfFacet(rc)
 
 # save current annotations to a file named "talosblf-last.csv"
 # this file will be used in the next iteration 

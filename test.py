@@ -103,21 +103,6 @@ def checkCsvContent(csvFile):
         print("I'd upload some stuff now.")
     else:
         print("I would NOT upload anything now.")
-    
-def compareCsvFiles(oneFile, twoFile, delfile, addfile):
-    nRowCsvIterate = 0
-    with open(oneFile, 'r') as fileOne, open(twoFile, 'r') as fileTwo:
-        rowsFromOne = csv.reader(fileOne)
-        rowsFromTwo = csv.reader(fileTwo)
-        diff = csvdiff(fileOne, fileTwo)
-        print(diff)
-        
-
-        # for row in csv_rows:
-        #     if len(row) > 0:
-        #         # print(len(row))
-        #         # print(row)
-        #         nRowCsvIterate += 1
 
 
 
@@ -194,4 +179,3 @@ else:
 
 checkCsvContent('test2.csv')
 
-compareCsvFiles('test.csv', 'test2.csv','testdel.csv', 'testadd.csv')
