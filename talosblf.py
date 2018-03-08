@@ -246,11 +246,9 @@ annotationsAndDeltas(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelF
 uploadAdditions(rc, deltaAddFile)
 
 # call function to upload delete annotations file to tetration 
-'''
+
 if checkCsvContent(deltaDelFile):
     uploadDeletions(rc, deltaDelFile)
-'''
-uploadDeletions(rc, deltaDelFile)
 
 # Check to see if the BlackList annotation has been enabled in the annotation facets, if not, enable it
 # this may not be needed any more... ?
@@ -258,4 +256,4 @@ uploadDeletions(rc, deltaDelFile)
 
 # save current annotations to a file named "talosblf-last.csv"
 # this file will be used in the next iteration 
-# fileCleanUp(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
+fileCleanUp(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelFile)
