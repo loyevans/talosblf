@@ -246,8 +246,11 @@ annotationsAndDeltas(lastTalosBlFile, latestTalosBlFile, deltaAddFile, deltaDelF
 uploadAdditions(rc, deltaAddFile)
 
 # call function to upload delete annotations file to tetration 
+'''
 if checkCsvContent(deltaDelFile):
     uploadDeletions(rc, deltaDelFile)
+'''
+uploadDeletions(rc, deltaDelFile)
 
 # Check to see if the BlackList annotation has been enabled in the annotation facets, if not, enable it
 # this may not be needed any more... ?
